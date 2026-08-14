@@ -1,5 +1,20 @@
 # dsh-client-ui-mobile-adapt
 
+> **Your DeepSeek Harness web UI, rebuilt for the phone in your hand.**
+>
+> Built for developers who code in **Termux on Android**: the three-column
+> desktop shell collapses into a clean single-column mobile layout — sidebar
+> becomes a swipe drawer, composer tools stay on one line, settings and
+> trajectory details open as full-screen panels that actually scroll, and a
+> tap on the stats pill reveals the whole session report. Desktop stays
+> exactly as it is; your phone finally works.
+
+> **为在手机上用 Termux 敲代码的你，把 DeepSeek Harness 的 Web 界面真正搬上手机屏。**
+>
+> 专为 Android 上的 Termux 开发者打造：三栏桌面布局收敛为清爽的单栏移动布局——
+> 侧边栏变成滑出抽屉、输入工具保持一行、设置与轨迹详情以可滚动的全屏面板呈现、
+> 点一下统计胶囊就能看到完整会话报告。桌面端分毫不动，手机端终于能用了。
+
 DeepSeek Harness Web GUI 的手机端适配**客户端插件**。
 
 纯客户端插件：仅在 `max-width: 768px` 视口下生效，桌面端完全不受影响。
