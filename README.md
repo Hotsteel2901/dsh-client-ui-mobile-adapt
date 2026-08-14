@@ -1,8 +1,10 @@
 # dsh-client-ui-mobile-adapt
 
-DeepSeek Harness Web GUI 的手机端适配**客户端插件**（npm 包，官方格式）。
+DeepSeek Harness Web GUI 的手机端适配**客户端插件**。
 
 纯客户端插件：仅在 `max-width: 768px` 视口下生效，桌面端完全不受影响。
+采用官方客户端插件格式（`dsh.client` 声明 + `window.__ModuleLoader__.load` 模块），
+同时可作为 profile bundle（`dsh.bundle.patch`）一键挂载。
 
 ## 功能
 
@@ -20,14 +22,44 @@ DeepSeek Harness Web GUI 的手机端适配**客户端插件**（npm 包，官�
 | 底部统计 | 胶囊摘要（轮/步/缓存/Token），点击展开完整统计面板（可滚动，× 关闭） |
 | iOS | `100dvh` 动态视口、刘海/底部安全区适配 |
 
-## 安装（发布到 npm 之后）
+## 安装
+
+### 方式一：推荐 —— 专用 profile（`dsh --profile webmobile`）
+
+本包同时是 **profile bundle**，最省事的使用方式是建一个包含它的 profile。
 
 ```bash
-# 在你的 dsh profile 目录里
-npm install dsh-client-ui-mobile-adapt
+# 1. 创建 webmobile profile（在 $DSH_HOME/profiles/webmobile/）
+#    package.json:
+#    {
+#      "name": "dsh-profile-webmobile",
+#      "private": true,
+#      "dependencies": {
+#        "dsh-client-ui-mobile-adapt": "https://github.com/Hotsteel2901/dsh-client-ui-mobile-adapt/archive/refs/heads/main.tar.gz"
+#      },
+#      "dsh": { "profile": { "bundles": [
+#        "@deepseek-ai/dsh-base",
+#        "@deepseek-ai/dsh-web-app",
+#        "dsh-client-ui-mobile-adapt"
+#      ] } }
+#    }
+
+# 2. 安装依赖
+cd ~/.dsh/profiles/webmobile
+npm install
+
+# 3. 启动（= web 全部功能 + 手机适配）
+dsh --profile webmobile
 ```
 
-然后在 profile 的 `cordis.patch.yml`（或 bundle patch）里插入一行：
+### 方式二：装进已有 profile
+
+```bash
+# 任意 profile 目录下
+dsh plugin --profile web <profile 名> add https://github.com/Hotsteel2901/dsh-client-ui-mobile-adapt/archive/refs/heads/main.tar.gz
+```
+
+或手动在 profile 的 `cordis.patch.yml` 里插入一行：
 
 ```yaml
 - insert:
@@ -35,9 +67,19 @@ npm install dsh-client-ui-mobile-adapt
       name: 'dsh-client-ui-mobile-adapt'
 ```
 
-重启 `dsh web` 即生效。
+重启即生效。
 
-> 版本约束：CSS 类名对应 DSH `0.1.0-rc.6` 的前端构建产物（CSS Modules 哈希类名）。若 DSH 升级、前端构建变化，需要按新构建产物重新核对类名。
+> ⚠️ **npm 12 安全策略**：npm 默认禁止 `git://`、`github:用户名/仓库` 和远程 tarball 依赖
+> （`EALLOWGIT` / `EALLOWREMOTE`）。**普通 `https://.../archive/refs/heads/main.tar.gz` URL 可以正常安装**，
+> 所以请使用 tarball URL 形式，不要用 `github:` 简写。
+>
+> 更新到最新版本（改代码重新 push 后）：
+> ```bash
+> npm cache clean --force && rm -rf node_modules/dsh-client-ui-mobile-adapt && npm install
+> ```
+
+> 版本约束：CSS 类名对应 DSH `0.1.0-rc.6` 的前端构建产物（CSS Modules 哈希类名）。
+> 若 DSH 升级、前端构建变化，需要按新构建产物重新核对类名。
 
 ## 依赖
 
@@ -49,14 +91,15 @@ npm install dsh-client-ui-mobile-adapt
 
 ```bash
 npm pack              # 本地打包验证
-npm publish           # 发布（需配置 npm 账号与仓库）
+npm publish           # 发布到 npm（需 npm 账号与 2FA；本包也可以只留在 GitHub）
 ```
 
 包结构：
 
 ```
-lib/index.js      # host 空入口
-lib/client.js     # 浏览器客户端插件（window.__ModuleLoader__.load 官方格式）
+lib/index.js       # host 空入口
+lib/client.js      # 浏览器客户端插件（window.__ModuleLoader__.load 官方格式）
+cordis.patch.yml   # bundle patch（insert ui-mobile-adapt 行）
 ```
 
 ## 涉及的产品内部类名（对应 0.1.0-rc.6 前端构建）
