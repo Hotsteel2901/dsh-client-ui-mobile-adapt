@@ -94,7 +94,9 @@ dsh plugin --profile web <profile 名> add https://github.com/Hotsteel2901/dsh-c
 > ```
 
 > 版本约束：CSS 类名对应 DSH `0.1.0-rc.6` 的前端构建产物（CSS Modules 哈希类名）。
-> 若 DSH 升级、前端构建变化，需要按新构建产物重新核对类名。
+> **peerDependencies 已精确锁定到 `0.1.0-rc.6`**（不是 `^0.1.0-rc.6`）：
+> `^` 范围会解析到更新的构建（如 `0.1.0-rc.8`），其哈希类名与 rc.6 不一致会导致布局类名失效。
+> 若 DSH 升级、前端构建变化，需要按新构建产物重新核对类名，并同步更新 peerDependencies。
 
 ## 依赖
 
