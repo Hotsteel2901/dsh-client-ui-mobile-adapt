@@ -81,7 +81,58 @@ DeepSeek Harness Web GUI 的手机端适配**客户端插件**。
 
 ## 安装
 
-### 方式一：推荐 —— 专用 profile（`dsh --profile webmobile`）
+### 方式零：一键脚本（推荐）
+
+仓库自带一键安装脚本，自动完成「定位 dsh → 建 profile → 装依赖 → 校验」全流程。
+
+**Linux / macOS / WSL / Git-Bash**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Hotsteel2901/dsh-client-ui-mobile-adapt/main/install.sh | bash
+```
+
+或在 clone 下来的仓库里直接跑：
+
+```bash
+./install.sh                      # 装进默认 profile webmobile
+./install.sh --profile my-ui      # 自定义 profile 名
+./install.sh --check              # 只体检、不改动
+./install.sh --version 0.1.5-rc.2 # 手动钉版本
+```
+
+**Windows（PowerShell 5.1+ / 7+）**
+
+```powershell
+.\install.ps1
+.\install.ps1 -Profile my-ui
+.\install.ps1 -Check
+```
+
+脚本会把插件装进 `$DSH_HOME/profiles/<profile>/`，并注册到
+`package.json` 的 `dsh.profile.bundles`，最后逐项校验关键包是否到位。
+
+> **关于 `curl … | bash` 一键跑**：本包**尚未发布到 npm**，所以脚本在检测不到本地
+> checkout 时会自动 `git clone --depth 1` 到临时目录再安装 —— 因此该用法**需要 git**。
+> 想省掉克隆，就先 clone 仓库再从仓库里跑 `./install.sh`（推荐，零依赖）。
+> `--from-npm` / `-FromNpm` 目前仅在包已发布后才可用。
+
+#### 脚本替你踩掉的三个坑
+
+自己手动装很容易在这里翻车，脚本已固化处理：
+
+| 坑 | 后果 | 脚本的处理 |
+|---|---|---|
+| dsh 生成的 `pnpm-workspace.yaml` 里 `autoInstallPeers: false` | 所有 `@deepseek-ai/dsh-*` 都把兄弟包声明为 **peer dependency**，关掉 peer 自动安装后 pnpm 会**静默漏装** `dsh-session-title-llm`，启动直接 `Cannot find package` | 强制写入 `autoInstallPeers: true` |
+| `dsh plugin` 只会带 `dsh-base`，不带 `dsh-web-app` | profile 起不来 Web UI | 显式安装两个 bundle |
+| registry 的 `latest` tag 指向**陈旧且有残缺**的 `0.0.1-rc.1`（其依赖 `@deepseek-ai/dsh-fs-policy` 从未发布） | `404 Not Found` 装不上 | 以 `dsh --version` 报告的版本为准，回退 `next` tag，**绝不信任 `latest`** |
+
+装完直接启动：
+
+```bash
+dsh --profile webmobile
+```
+
+### 方式一：手动 —— 专用 profile（`dsh --profile webmobile`）
 
 本包同时是 **profile bundle**，最省事的使用方式是建一个包含它的 profile。
 
@@ -92,6 +143,8 @@ DeepSeek Harness Web GUI 的手机端适配**客户端插件**。
 #      "name": "dsh-profile-webmobile",
 #      "private": true,
 #      "dependencies": {
+#        "@deepseek-ai/dsh-base": "0.1.5-rc.2",
+#        "@deepseek-ai/dsh-web-app": "0.1.5-rc.2",
 #        "dsh-client-ui-mobile-adapt": "https://github.com/Hotsteel2901/dsh-client-ui-mobile-adapt/archive/refs/heads/main.tar.gz"
 #      },
 #      "dsh": { "profile": { "bundles": [
@@ -109,6 +162,10 @@ npm install
 dsh --profile webmobile
 ```
 
+> 走 npm 路线时 peer 会被自动安装，所以不容易遇到上面那个
+> `dsh-session-title-llm` 缺失问题；但走 `dsh plugin`（pnpm）路线时**必须**先把
+> `pnpm-workspace.yaml` 里的 `autoInstallPeers` 改成 `true`。
+
 ### 方式二：装进已有 profile
 
 ```bash
@@ -125,6 +182,11 @@ dsh plugin --profile web <profile 名> add https://github.com/Hotsteel2901/dsh-c
 ```
 
 重启即生效。
+
+> ⚠️ **走 `dsh plugin`（pnpm）路线前，先确认
+> `profiles/<name>/pnpm-workspace.yaml` 里是 `autoInstallPeers: true`**，
+> 否则 `dsh-session-title-llm` 等 peer 依赖会被静默漏装，启动报
+> `Cannot find package '@deepseek-ai/dsh-session-title-llm'`。
 
 > ⚠️ **npm 12 安全策略**：npm 默认禁止 `git://`、`github:用户名/仓库` 和远程 tarball 依赖
 > （`EALLOWGIT` / `EALLOWREMOTE`）。**普通 `https://.../archive/refs/heads/main.tar.gz` URL 可以正常安装**，
