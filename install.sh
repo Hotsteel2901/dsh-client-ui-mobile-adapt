@@ -21,6 +21,8 @@ MIRROR="@deepseek-ai/dsh-web-app"
 BASE_PKG="@deepseek-ai/dsh-base"
 DEFAULT_PROFILE="webmobile"
 DEFAULT_VERSION=""          # empty => derive from the running harness
+# Used only when every detection method fails (offline, registry unreachable).
+FALLBACK_VERSION="0.1.5-rc.2"
 
 # Capture the script's own directory BEFORE any `cd` happens. Later steps chdir
 # into the profile directory, which would otherwise break relative resolution
@@ -233,6 +235,49 @@ ok "pnpm-workspace.yaml written (nodeLinker=hoisted, autoInstallPeers=true)"
 # ---------------------------------------------------------------------------
 step "[5/6] Installing packages"
 
+# ---- 5a-0. make sure pnpm exists -----------------------------------------
+#
+# `dsh plugin` is a thin wrapper around pnpm. The SEA build of dsh bundles
+# pnpm, but an npm-installed dsh shells out to whatever `pnpm` is on PATH and
+# fails with "pnpm not found on PATH" if there is none. Without pnpm every
+# `dsh plugin` call (including the `view` used for version detection) fails,
+# which is why version detection collapses too. Bootstrap pnpm first.
+ensure_pnpm() {
+  if command -v pnpm >/dev/null 2>&1; then
+    ok "pnpm: $(command -v pnpm) ($(pnpm --version 2>/dev/null | head -n1))"
+    return 0
+  fi
+  # The dsh SEA binary may carry its own pnpm even if none is on PATH.
+  if "$DSH_BIN" plugin --profile "$PROFILE" -v >/dev/null 2>&1; then
+    ok "pnpm: bundled inside the dsh binary"
+    return 0
+  fi
+
+  warn "pnpm not found — dsh needs it to manage profile plugins"
+  if command -v corepack >/dev/null 2>&1; then
+    info "enabling pnpm via corepack"
+    corepack enable pnpm >/dev/null 2>&1 || true
+    corepack prepare pnpm@10 --activate >/dev/null 2>&1 || true
+    hash -r 2>/dev/null || true
+  fi
+  if ! command -v pnpm >/dev/null 2>&1; then
+    if command -v npm >/dev/null 2>&1; then
+      info "installing pnpm via npm"
+      npm install -g pnpm@10 >/dev/null 2>&1 || npm install -g pnpm >/dev/null 2>&1 || true
+      hash -r 2>/dev/null || true
+    fi
+  fi
+  if command -v pnpm >/dev/null 2>&1; then
+    ok "pnpm installed: $(command -v pnpm)"
+    return 0
+  fi
+  die "pnpm is required but could not be installed automatically.
+      Install it yourself and re-run:
+        corepack enable pnpm      # or:  npm install -g pnpm
+      Then: ./install.sh"
+}
+ensure_pnpm
+
 # ---- 5a. work out which dsh version to target -----------------------------
 #
 # Version resolution order matters. The registry's `latest` dist-tag for
@@ -258,9 +303,12 @@ fi
 
 if [ -z "$VERSION" ]; then
   harness_ver="$("$DSH_BIN" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?' | head -n1 || true)"
-  if [ -n "$harness_ver" ] && pkg_exists "$BASE_PKG@$harness_ver"; then
-    VERSION="$harness_ver"
-    info "matched the installed harness version reported by 'dsh --version'"
+  if [ -n "$harness_ver" ]; then
+    info "harness reports version: $harness_ver"
+    if pkg_exists "$BASE_PKG@$harness_ver"; then
+      VERSION="$harness_ver"
+      info "matched the installed harness version"
+    fi
   fi
 fi
 
@@ -273,9 +321,12 @@ if [ -z "$VERSION" ]; then
   fi
 fi
 
+# Last resort: a known-good version. Better to try something reasonable and
+# let `pnpm add` report a real error than to bail out before doing anything.
 if [ -z "$VERSION" ]; then
-  die "could not determine a dsh version to install.
-      Pass one explicitly, e.g.  ./install.sh --version 0.1.5-rc.2"
+  warn "could not detect the harness version (registry unreachable?)"
+  warn "falling back to $FALLBACK_VERSION — override with --version"
+  VERSION="$FALLBACK_VERSION"
 fi
 ok "target dsh version: $VERSION"
 

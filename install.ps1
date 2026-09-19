@@ -52,6 +52,9 @@ $PluginName = 'dsh-client-ui-mobile-adapt'
 $MirrorPkg  = '@deepseek-ai/dsh-web-app'
 $BasePkg    = '@deepseek-ai/dsh-base'
 $RepoUrl    = 'https://github.com/Hotsteel2901/dsh-client-ui-mobile-adapt.git'
+# Used only when every detection method fails. Never `latest`: that tag points
+# at a broken 0.0.1-rc.1 whose own dependency was never published.
+$FallbackVersion = '0.1.5-rc.2'
 
 # Packages that must exist for the runtime to boot. These are pulled in as
 # PEER dependencies; with autoInstallPeers disabled they go missing.
@@ -249,6 +252,102 @@ Write-Ok 'pnpm-workspace.yaml written (nodeLinker=hoisted, autoInstallPeers=true
 # ---------------------------------------------------------------------------
 Write-Step '[5/6] Installing packages'
 
+# `dsh plugin` is a thin wrapper around pnpm. The dsh SEA build bundles pnpm,
+# but an npm-installed dsh shells out to whatever `pnpm` is on PATH and fails
+# with "pnpm not found on PATH" when there is none. Without pnpm every
+# `dsh plugin` call fails — including the `view` used for version detection.
+function Ensure-Pnpm {
+    if (Get-Command pnpm -ErrorAction SilentlyContinue) {
+        Write-Ok "pnpm: $((Get-Command pnpm).Source)"
+        return
+    }
+    try {
+        & $DshBin plugin --profile $ProfileName -v *> $null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Ok 'pnpm: bundled inside the dsh binary'
+            return
+        }
+    } catch { }
+
+    Write-Warn 'pnpm not found — dsh needs it to manage profile plugins'
+    $npm = Get-Command npm -ErrorAction SilentlyContinue
+    if ($npm) {
+        Write-Info 'installing pnpm via npm'
+        & $npm install -g pnpm@10 *> $null
+        if ($LASTEXITCODE -ne 0) { & $npm install -g pnpm *> $null }
+    } else {
+        Write-Warn 'npm not found either; trying corepack'
+        $corepack = Get-Command corepack -ErrorAction SilentlyContinue
+        if ($corepack) {
+            & $corepack enable pnpm *> $null
+            & $corepack prepare pnpm@10 --activate *> $null
+        }
+    }
+    if (Get-Command pnpm -ErrorAction SilentlyContinue) {
+        Write-Ok "pnpm installed: $((Get-Command pnpm).Source)"
+        return
+    }
+    Stop-Fatal @'
+pnpm is required but could not be installed automatically.
+Install it yourself, then re-run this script:
+
+    npm install -g pnpm
+'@
+}
+Ensure-Pnpm
+
+# ---- 5a. work out which dsh version to target -----------------------------
+# Order matters: the registry `latest` dist-tag for @deepseek-ai/dsh-base
+# points at an ancient, BROKEN 0.0.1-rc.1 whose own dependency
+# (@deepseek-ai/dsh-fs-policy) was never published. Never fall back to `latest`.
+if (-not $Version -and (Test-Path -LiteralPath $pkgJsonPath)) {
+    try {
+        $doc = Get-Content -LiteralPath $pkgJsonPath -Raw | ConvertFrom-Json
+        $existing = $doc.dependencies.$BasePkg
+        if ($existing) {
+            $Version = [string] $existing
+            Write-Info "reusing version already pinned in this profile: $Version"
+        }
+    } catch { }
+}
+
+if (-not $Version) {
+    $raw = (& $DshBin --version 2>$null | Select-Object -First 1)
+    if ($raw) {
+        $harnessVer = [string] (($raw -replace '\s', '') -replace '^[^\d]*', '')
+        if ($harnessVer -match '^\d+\.\d+\.\d+') {
+            Write-Info "harness reports version: $harnessVer"
+            & $DshBin plugin --profile $ProfileName view "$BasePkg@$harnessVer" version *> $null
+            if ($LASTEXITCODE -eq 0) {
+                $Version = $harnessVer
+                Write-Info 'matched the installed harness version'
+            }
+        }
+    }
+}
+
+if (-not $Version) {
+    try {
+        $raw = (& $DshBin plugin --profile $ProfileName view "$BasePkg@next" version 2>$null | Select-Object -Last 1)
+        if ($raw) {
+            $nextVer = ($raw -replace '\s', '')
+            if ($nextVer -match '^\d') {
+                $Version = $nextVer
+                Write-Info "using the registry 'next' dist-tag"
+            }
+        }
+    } catch { }
+}
+
+# Last resort: a known-good version. Trying something reasonable beats bailing
+# out before doing anything at all.
+if (-not $Version -or $Version -notmatch '^\d') {
+    Write-Warn "could not detect the harness version (registry unreachable?)"
+    Write-Warn "falling back to $FallbackVersion — override with -Version"
+    $Version = $FallbackVersion
+}
+Write-Ok "target dsh version: $Version"
+
 function Invoke-DshPlugin {
     # NOTE: the parameter is $PluginArgs, NOT $Args — `$args` is a PowerShell
     # automatic variable holding unbound arguments; binding it as a named
@@ -261,32 +360,6 @@ function Invoke-DshPlugin {
     }
     if ($LASTEXITCODE -ne 0) { Stop-Fatal "dsh plugin $($PluginArgs -join ' ') failed (exit $LASTEXITCODE)" }
 }
-
-# ---- 5a. work out which dsh version to target -----------------------------
-if (-not $Version -and (Test-Path -LiteralPath $pkgJsonPath)) {
-    try {
-        $doc = Get-Content -LiteralPath $pkgJsonPath -Raw | ConvertFrom-Json
-        $existing = $doc.dependencies.$BasePkg
-        if ($existing) {
-            $Version = [string] $existing
-            Write-Info "reusing pinned version from existing profile: $Version"
-        }
-    } catch { }
-}
-
-if (-not $Version) {
-    Write-Info 'querying the registry for the newest dsh version'
-    try {
-        $raw = (& $DshBin plugin --profile $ProfileName view $BasePkg version 2>$null | Select-Object -Last 1)
-        if ($raw) { $Version = ($raw -replace '\s', '') }
-    } catch { }
-}
-
-if (-not $Version -or $Version -notmatch '^\d') {
-    Write-Warn "could not determine a version from the registry; falling back to 'latest'"
-    $Version = 'latest'
-}
-Write-Ok "target dsh version: $Version"
 
 # ---- 5b. install the harness bundles -------------------------------------
 Write-Info "installing $BasePkg@$Version"

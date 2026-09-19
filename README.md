@@ -116,6 +116,28 @@ curl -fsSL https://raw.githubusercontent.com/Hotsteel2901/dsh-client-ui-mobile-a
 > 想省掉克隆，就先 clone 仓库再从仓库里跑 `./install.sh`（推荐，零依赖）。
 > `--from-npm` / `-FromNpm` 目前仅在包已发布后才可用。
 
+**需要 pnpm**：`dsh plugin` 本身就是 pnpm 的一层封装。dsh 的 SEA 发行版内置 pnpm，
+但**通过 npm 安装的 dsh 会去 PATH 上找 `pnpm`**，找不到就报
+`pnpm not found on PATH`。脚本会先检测，缺失时自动用 corepack 或 `npm i -g pnpm`
+装一个；实在装不上才会报错让你手动装。
+
+#### 给管道传参的正确写法
+
+`curl … | bash` 后面直接接 `--version` 会被 **bash 自己**吃掉（变成查 bash 版本）。
+要传给脚本，必须用 `-s --`：
+
+```bash
+# ✗ 错误：打印的是 bash 的版本
+curl -fsSL .../install.sh | bash --version 0.1.5-rc.2
+
+# ✓ 正确
+curl -fsSL .../install.sh | bash -s -- --version 0.1.5-rc.2
+curl -fsSL .../install.sh | bash -s -- --profile my-ui
+```
+
+其实一般不用传 `--version`：脚本会依次用「profile 里已钉的版本」→
+`dsh --version` → registry 的 `next` tag 来推断，全失败才回退 `0.1.5-rc.2`。
+
 #### 脚本替你踩掉的三个坑
 
 自己手动装很容易在这里翻车，脚本已固化处理：
