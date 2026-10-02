@@ -79,6 +79,18 @@ DeepSeek Harness Web GUI 的手机端适配**客户端插件**。
 | `usage` 只判 `undefined` | `usage` 为 `null` 时读属性抛错 | 归一化为 `null` 再判，数值走 `num()` |
 | 统计面板滚动锁失效 | `touchmove` 没有 `deltaY`，方向恒判为 false，手机上面板边界穿透 | 改用前后触点 Y 差值判断方向 |
 
+## 修复的上游组件替换（DSH STORE 契约）
+
+底部统计条目此前注册进 `conversation.composer.dock` 时**冒用了上游 `ui-chat` 的条目 ID `"stats"`**
+（同 ID + 更低 `priority` = 遮蔽官方组件），违反 DSH STORE「不替换官方组件、只用插件自有 ID」契约。
+
+现已改为插件自有 ID **`dsh-mobile-stats`**，不再遮蔽官方条目；手机端改用
+`@media (max-width: 767px)` 内的 `.bOPqQW_root { display: none }` 隐藏上游原生统计行，
+桌面端则完全不动上游（本插件胶囊基态 `display: none`）。这样：
+
+- 桌面端：显示上游原生统计行，与本插件安装前一致；
+- 手机端：显示本插件的统计胶囊 + 展开面板，且不会出现两行统计。
+
 ## 安装
 
 ### 方式零：一键脚本（推荐）
@@ -219,26 +231,66 @@ dsh plugin --profile web <profile 名> add https://github.com/Hotsteel2901/dsh-c
 > npm cache clean --force && rm -rf node_modules/dsh-client-ui-mobile-adapt && npm install
 > ```
 
-> **版本约束**：本插件已从 DSH `0.1.0-rc.6` 经 `0.1.5-rc.2` 同步到 **`0.2.0-rc.2`**（当前 `next` tag）。
-> `peerDependencies` 声明为范围 `>=0.1.5-rc.2 <0.3.0`，因此 `0.1.5-rc.2` 与 `0.2.0-rc.2` 都能用。
+> **版本约束**：本插件已从 DSH `0.1.0-rc.6` 经 `0.1.5-rc.2`、`0.1.7-rc.2` 同步到 **`0.2.0-rc.2`**（当前 `next` tag）。
+> `peerDependencies` 声明为范围 `>=0.1.5-rc.2 <0.3.0`，因此 `0.1.5-rc.2` / `0.1.7-rc.2` / `0.2.0-rc.2` 都能用；
+> `dsh.compatibility` 另行给出逐版本声明（见下节）。
 >
 > 选择器策略为**分级锚定**，越靠前越抗漂移：
 > 1. **官方语义锚**（首选）——`[data-sidebar-collapsed]`、`[data-rightbar-col]`、
 >    `[data-rightbar-collapsed]`、`[data-chat-flow]`、`[data-composer-seat]` 等。
 >    这些是 dsh 自己声明的扩展点，不会随构建哈希变化。
 > 2. **本插件自有类名**——`.dsh-mobile-hamburger`、`.dsh-stats-panel` 等，完全自控。
-> 3. **上游哈希类名**（兜底）——仅在无语义锚时使用。已对 `0.2.0-rc.2` 全量核对。
+> 3. **上游哈希类名**（兜底）——仅在无语义锚时使用。已对 `0.1.5-rc.2`、`0.1.7-rc.2`、`0.2.0-rc.2` 全量核对，
+>    改名的一律**双代同时匹配**（见 `lib/client.js` 的 `DRIFT REGISTER`）。
 >
-> 历史代际的哈希类名**一并保留**（如 `Sh0Q9G_*` 与 `lats3W_*` 仍留在选择器列表里），
-> 所以插件在 `0.1.5-rc.2` 上不会退化。
+> 历史代际的哈希类名**一并保留**（如 `Sh0Q9G_*`、`iWlSmW_*`、`lats3W_*`、`uV2eYG_*` 仍在选择器列表里），
+> 所以插件在任一受支持版本上都不会退化。
 >
-> 若 DSH 再次升级，优先检查 `DRIFT REGISTER`（见 `lib/client.js` 文件头注释）中登记的历史漂移，
-> 再跑 `tools/sync_check.py` 复验选择器是否仍然命中。
+> 若 DSH 再次升级，优先检查 `DRIFT REGISTER`（见 `lib/client.js` 文件头注释）中登记的漂移，
+> 再跑 `tools/regress.py` 与 `tools/sync_check.py` 复验选择器是否仍然命中。
 
 > **测试工具注意（0.2.0-rc.2 起）**：`0.2.0-rc.2` 的客户端会保持一条长连接，
 > 导致 Playwright 的 `wait_until="networkidle"` **永不触发**（表现为 `Page.goto` 45s 超时）。
 > `tools/` 下的脚本已统一改为 `wait_until="domcontentloaded"` + 固定等待。
-> 自己写脚本时请照此办理。
+> 自己写脚本时请照此办理；对 `0.1.x` 两代两种等待都可以，但统一用 `domcontentloaded` 最稳。
+
+## DSH 兼容性声明
+
+`package.json` 的 `dsh.compatibility` 按 DSH STORE 契约逐版本声明，`engines.node` 声明 Node 范围：
+
+```json
+"compatibility": {
+  "dsh": ">=0.1.5-rc.2 <0.3.0",
+  "dshReleases": {
+    "0.1.5-rc.2": "compatible",
+    "0.1.5-rc.3": "compatible",
+    "0.1.6-alpha.1": "compatible",
+    "0.1.6-alpha.2": "compatible",
+    "0.1.7-rc.1": "compatible",
+    "0.1.7-rc.2": "compatible",
+    "0.2.0-rc.1": "unknown",
+    "0.2.0-rc.2": "compatible",
+    "0.1.3-alpha.1": "incompatible",
+    "0.1.3-alpha.2": "incompatible",
+    "0.1.5-alpha.1": "incompatible",
+    "0.1.5-alpha.2": "incompatible",
+    "0.1.5-rc.1": "incompatible",
+    "0.1.7-alpha.1": "unknown",
+    "0.1.7-alpha.2": "unknown"
+  }
+}
+```
+
+判定依据是**对上游发行包 dist 的静态核对**（语义锚 + 插件引用到的全部哈希类名 + 槽位/投影 API）；
+`0.2.0-rc.2` 另做过真实 Profile 的运行验收（插件包正常投递、汉堡/抽屉/统计在手机端接管、
+桌面端零改动、零 hOverflow、零页面错误）。
+
+- `compatible`：该版本 dist 中本插件引用的锚点/类名/API 全部命中。
+- `incompatible`：早于本插件声明的支持下限（`0.1.5-rc.2`）。
+- `unknown`：`0.1.7-alpha.1` / `0.1.7-alpha.2` 的 `agent-preset` 改版删除了
+  `rtSEdW_iconButton`（删除按钮 44px 触摸目标规则失配），未做完整核对；
+  `0.2.0-rc.1` 为过渡版本，未单独核对。
+
 
 ## 依赖
 
@@ -291,22 +343,22 @@ tools/test_mobile.py      # 多视口布局指标采集
 tools/test_interactions.py# 交互路径探测（抽屉/设置/统计）
 ```
 
-## 涉及的产品内部类名（已核对 DSH `0.2.0-rc.2`）
+## 涉及的产品内部类名（已核对 DSH `0.1.5-rc.2`、`0.1.7-rc.2`、`0.2.0-rc.2`）
 
-按所属包归类（扫描已安装的 `node_modules` 得到）：
+按所属包归类（扫描各代发行包 dist 得到；跨代变化标注在括号内）：
 
 | 包 | 哈希前缀 |
 | --- | --- |
 | `dsh-client-ui-layout` | `pI_x6G_` |
-| `dsh-client-ui-conversation` | `wSkVaW_` `uV2eYG_` `JObwrW_` `pXSMma_` `T1PP_q_` |
+| `dsh-client-ui-conversation` | `wSkVaW_` `uV2eYG_` `JObwrW_` `pXSMma_` `T1PP_q_`（`Sh0Q9G_` 于 0.1.7 起并入 `uV2eYG_select`） |
 | `dsh-client-ui-settings-general` | `VOzbGW_` `UQsH_q_` `me01iq_` |
 | `dsh-client-ui-settings-models` | `zGbnIq_` |
 | `dsh-client-ui-settings-plugins` | `pbvGtq_` |
 | `dsh-client-ui-agent-preset` | `rtSEdW_` |
 | `dsh-client-ui-theme` | `bVCLcG_` |
-| `dsh-client-ui-permission-presets` | `oY77xG_` `iWlSmW_` |
+| `dsh-client-ui-permission-presets` | `oY77xG_`（`iWlSmW_*` 于 0.2.0 起由 conversation 迁入） |
 | `dsh-client-locale` | `hVGvvW_` |
-| `dsh-client-ui-chat` | `_2XZxNq_` |
+| `dsh-client-ui-chat` | `_2XZxNq_` `bOPqQW_`（`lats3W_selector` 于 0.1.7 起更名 `_2XZxNq_selector`） |
 | `dsh-client-ui-cordis` | `Nqubda_` |
 | `dsh-client-ui-trajectory` | `Y0dWHa_` `qBU-ya_` `fV0t5q_` |
 | `dsh-client-ui-sidebar` | `hHd-Xa_` |
@@ -315,19 +367,25 @@ tools/test_interactions.py# 交互路径探测（抽屉/设置/统计）
 
 ### 已知漂移
 
-**0.1.5-rc.2 → 0.2.0-rc.2**
-
-- `Sh0Q9G_trigger` / `Sh0Q9G_triggerLabel`（composer 模式触发器）→ `iWlSmW_*`。
-  **组件还换了包**：从 `dsh-client-ui-conversation` 搬到了 `dsh-client-ui-permission-presets`。
-  旧代际仍保留在选择器里，故 `0.1.5-rc.2` 不退化。
-- `lats3W_selector`（模型/智能体选择器，属 `dsh-client-ui-chat`）→ `_2XZxNq_selector`。两代同时匹配。
-- 其余 0.1.5-rc.2 已核对的前缀在 0.2.0-rc.2 dist 中**全部复核仍然存在**，原样匹配。
-
-**rc.6 → 0.1.5-rc.2**
+rc.6 → 0.1.5-rc.2：
 
 - `pI_x6G_detailsCol` → 更名 `pI_x6G_rightbarCol`（两代同时匹配，并已换成 `[data-rightbar-col]` 语义锚）
 - `Md3f7G_*`（ChatView.module.css）整包删除；其 `min-width:0` 职责改由 `[data-chat-flow] > *` 承担
 - `wSkVaW_headerActions` 拆分出 `wSkVaW_headerCorner` / `wSkVaW_widthHandle`（窄屏隐藏，避免与汉堡争位）
+
+0.1.5-rc.2 → 0.1.7-rc.2：
+
+- conversation `Sh0Q9G_trigger` / `Sh0Q9G_triggerLabel` 删除，职责并入 `uV2eYG_select`（两代同时匹配）
+- chat `lats3W_selector` → 更名 `_2XZxNq_selector`（两代同时匹配）
+- chat `bOPqQW_root`（上游统计行）两代稳定，手机端隐藏以让位给本插件胶囊
+
+0.1.7-rc.2 → 0.2.0-rc.2：
+
+- conversation `Sh0Q9G_trigger` / `Sh0Q9G_triggerLabel`（composer 模式触发器）→ `iWlSmW_*`。
+  **组件还换了包**：从 `dsh-client-ui-conversation` 搬到了 `dsh-client-ui-permission-presets`。
+  旧代际仍保留在选择器里，故 `0.1.5-rc.2` / `0.1.7-rc.2` 不退化。
+- 其余各代已核对的前缀在 `0.2.0-rc.2` dist 中**全部复核仍然存在**，原样匹配。
+
 
 ## License
 
