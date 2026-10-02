@@ -22,7 +22,7 @@ BASE_PKG="@deepseek-ai/dsh-base"
 DEFAULT_PROFILE="webmobile"
 DEFAULT_VERSION=""          # empty => derive from the running harness
 # Used only when every detection method fails (offline, registry unreachable).
-FALLBACK_VERSION="0.1.5-rc.2"
+FALLBACK_VERSION="0.2.0-rc.2"
 
 # Capture the script's own directory BEFORE any `cd` happens. Later steps chdir
 # into the profile directory, which would otherwise break relative resolution

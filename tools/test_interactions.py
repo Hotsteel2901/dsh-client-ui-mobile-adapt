@@ -114,7 +114,7 @@ def run(base_url):
         pg = ctx.new_page()
         errs = []
         pg.on("pageerror", lambda e: errs.append(str(e)[:400]))
-        pg.goto(base_url, wait_until="networkidle", timeout=45000)
+        pg.goto(base_url, wait_until="domcontentloaded", timeout=45000)
         pg.wait_for_timeout(2500)
         out["dialogsDismissed"] = dismiss_dialogs(pg)
         pg.wait_for_timeout(600)

@@ -97,7 +97,7 @@ curl -fsSL https://raw.githubusercontent.com/Hotsteel2901/dsh-client-ui-mobile-a
 ./install.sh                      # 装进默认 profile webmobile
 ./install.sh --profile my-ui      # 自定义 profile 名
 ./install.sh --check              # 只体检、不改动
-./install.sh --version 0.1.5-rc.2 # 手动钉版本
+./install.sh --version 0.2.0-rc.2 # 手动钉版本
 ```
 
 **Windows（PowerShell 5.1+ / 7+）**
@@ -128,15 +128,15 @@ curl -fsSL https://raw.githubusercontent.com/Hotsteel2901/dsh-client-ui-mobile-a
 
 ```bash
 # ✗ 错误：打印的是 bash 的版本
-curl -fsSL .../install.sh | bash --version 0.1.5-rc.2
+curl -fsSL .../install.sh | bash --version 0.2.0-rc.2
 
 # ✓ 正确
-curl -fsSL .../install.sh | bash -s -- --version 0.1.5-rc.2
+curl -fsSL .../install.sh | bash -s -- --version 0.2.0-rc.2
 curl -fsSL .../install.sh | bash -s -- --profile my-ui
 ```
 
 其实一般不用传 `--version`：脚本会依次用「profile 里已钉的版本」→
-`dsh --version` → registry 的 `next` tag 来推断，全失败才回退 `0.1.5-rc.2`。
+`dsh --version` → registry 的 `next` tag 来推断，全失败才回退 `0.2.0-rc.2`。
 
 #### 脚本替你踩掉的三个坑
 
@@ -165,8 +165,8 @@ dsh --profile webmobile
 #      "name": "dsh-profile-webmobile",
 #      "private": true,
 #      "dependencies": {
-#        "@deepseek-ai/dsh-base": "0.1.5-rc.2",
-#        "@deepseek-ai/dsh-web-app": "0.1.5-rc.2",
+#        "@deepseek-ai/dsh-base": "0.2.0-rc.2",
+#        "@deepseek-ai/dsh-web-app": "0.2.0-rc.2",
 #        "dsh-client-ui-mobile-adapt": "https://github.com/Hotsteel2901/dsh-client-ui-mobile-adapt/archive/refs/heads/main.tar.gz"
 #      },
 #      "dsh": { "profile": { "bundles": [
@@ -219,18 +219,26 @@ dsh plugin --profile web <profile 名> add https://github.com/Hotsteel2901/dsh-c
 > npm cache clean --force && rm -rf node_modules/dsh-client-ui-mobile-adapt && npm install
 > ```
 
-> **版本约束**：本插件已从 DSH `0.1.0-rc.6` 同步到 **`0.1.5-rc.2`**（Android 16 / LineageOS 23.2 时代）。
-> `peerDependencies` 声明为范围 `>=0.1.5-rc.2 <0.2.0`，允许补丁级升级。
+> **版本约束**：本插件已从 DSH `0.1.0-rc.6` 经 `0.1.5-rc.2` 同步到 **`0.2.0-rc.2`**（当前 `next` tag）。
+> `peerDependencies` 声明为范围 `>=0.1.5-rc.2 <0.3.0`，因此 `0.1.5-rc.2` 与 `0.2.0-rc.2` 都能用。
 >
 > 选择器策略为**分级锚定**，越靠前越抗漂移：
 > 1. **官方语义锚**（首选）——`[data-sidebar-collapsed]`、`[data-rightbar-col]`、
 >    `[data-rightbar-collapsed]`、`[data-chat-flow]`、`[data-composer-seat]` 等。
 >    这些是 dsh 自己声明的扩展点，不会随构建哈希变化。
 > 2. **本插件自有类名**——`.dsh-mobile-hamburger`、`.dsh-stats-panel` 等，完全自控。
-> 3. **上游哈希类名**（兜底）——仅在无语义锚时使用。已对 `0.1.5-rc.2` 全量核对。
+> 3. **上游哈希类名**（兜底）——仅在无语义锚时使用。已对 `0.2.0-rc.2` 全量核对。
 >
-> 若 DSH 再次升级，优先检查 `DRIFT REGISTER`（见 `lib/client.js` 文件头注释）中登记的两处历史漂移，
-> 再跑 `tools/regress.py` 复验。
+> 历史代际的哈希类名**一并保留**（如 `Sh0Q9G_*` 与 `lats3W_*` 仍留在选择器列表里），
+> 所以插件在 `0.1.5-rc.2` 上不会退化。
+>
+> 若 DSH 再次升级，优先检查 `DRIFT REGISTER`（见 `lib/client.js` 文件头注释）中登记的历史漂移，
+> 再跑 `tools/sync_check.py` 复验选择器是否仍然命中。
+
+> **测试工具注意（0.2.0-rc.2 起）**：`0.2.0-rc.2` 的客户端会保持一条长连接，
+> 导致 Playwright 的 `wait_until="networkidle"` **永不触发**（表现为 `Page.goto` 45s 超时）。
+> `tools/` 下的脚本已统一改为 `wait_until="domcontentloaded"` + 固定等待。
+> 自己写脚本时请照此办理。
 
 ## 依赖
 
@@ -244,9 +252,17 @@ dsh plugin --profile web <profile 名> add https://github.com/Hotsteel2901/dsh-c
 # 纯逻辑单测（格式化函数的进位/边界），无需浏览器
 npm test                          # = node tools/unit.test.mjs
 
+# 选择器同步校验（0.2.0-rc.2）：确认每个哈希类名仍命中，且仍只在手机端生效
+python3 tools/sync_check.py "http://127.0.0.1:18081/?token=<token>"
+
 # 端到端回归（需一个运行中的 dsh web 实例）
 python3 tools/regress.py "http://127.0.0.1:18081/?token=<token>"
 ```
+
+`sync_check.py` 覆盖那些**只在活会话里才挂载**的组件（composer 模式触发器、模型/智能体选择器）。
+它不依赖可用的 LLM 凭据——而是插入带真实上游类名的探针元素，然后测量插件注入的样式表：
+断言在 **390px（手机）** 上样式生效、在 **1440px（桌面）** 上原样未动。
+两侧同时成立才说明「选择器仍命中上游 **且** 仍被正确限定在移动端断点内」。
 
 `regress.py` 断言两组：
 - **A. 触摸目标**：设置面板四个 tab 内所有可交互控件 ≥ 44×44
@@ -275,29 +291,39 @@ tools/test_mobile.py      # 多视口布局指标采集
 tools/test_interactions.py# 交互路径探测（抽屉/设置/统计）
 ```
 
-## 涉及的产品内部类名（已核对 DSH `0.1.5-rc.2`）
+## 涉及的产品内部类名（已核对 DSH `0.2.0-rc.2`）
 
 按所属包归类（扫描已安装的 `node_modules` 得到）：
 
 | 包 | 哈希前缀 |
 | --- | --- |
 | `dsh-client-ui-layout` | `pI_x6G_` |
-| `dsh-client-ui-conversation` | `wSkVaW_` `uV2eYG_` `Sh0Q9G_` `JObwrW_` `pXSMma_` `T1PP_q_` |
+| `dsh-client-ui-conversation` | `wSkVaW_` `uV2eYG_` `JObwrW_` `pXSMma_` `T1PP_q_` |
 | `dsh-client-ui-settings-general` | `VOzbGW_` `UQsH_q_` `me01iq_` |
 | `dsh-client-ui-settings-models` | `zGbnIq_` |
 | `dsh-client-ui-settings-plugins` | `pbvGtq_` |
 | `dsh-client-ui-agent-preset` | `rtSEdW_` |
 | `dsh-client-ui-theme` | `bVCLcG_` |
-| `dsh-client-ui-permission-presets` | `oY77xG_` |
+| `dsh-client-ui-permission-presets` | `oY77xG_` `iWlSmW_` |
 | `dsh-client-locale` | `hVGvvW_` |
-| `dsh-client-ui-chat` | `lats3W_` |
+| `dsh-client-ui-chat` | `_2XZxNq_` |
 | `dsh-client-ui-cordis` | `Nqubda_` |
 | `dsh-client-ui-trajectory` | `Y0dWHa_` `qBU-ya_` `fV0t5q_` |
 | `dsh-client-ui-sidebar` | `hHd-Xa_` |
 | `dsh-client-ui-model-selection` | `_7KE1Ra_` |
 | `dsh-client-ui-commands` | `mufS8W_` |
 
-### 已知漂移（rc.6 → 0.1.5-rc.2）
+### 已知漂移
+
+**0.1.5-rc.2 → 0.2.0-rc.2**
+
+- `Sh0Q9G_trigger` / `Sh0Q9G_triggerLabel`（composer 模式触发器）→ `iWlSmW_*`。
+  **组件还换了包**：从 `dsh-client-ui-conversation` 搬到了 `dsh-client-ui-permission-presets`。
+  旧代际仍保留在选择器里，故 `0.1.5-rc.2` 不退化。
+- `lats3W_selector`（模型/智能体选择器，属 `dsh-client-ui-chat`）→ `_2XZxNq_selector`。两代同时匹配。
+- 其余 0.1.5-rc.2 已核对的前缀在 0.2.0-rc.2 dist 中**全部复核仍然存在**，原样匹配。
+
+**rc.6 → 0.1.5-rc.2**
 
 - `pI_x6G_detailsCol` → 更名 `pI_x6G_rightbarCol`（两代同时匹配，并已换成 `[data-rightbar-col]` 语义锚）
 - `Md3f7G_*`（ChatView.module.css）整包删除；其 `min-width:0` 职责改由 `[data-chat-flow] > *` 承担

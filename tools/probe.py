@@ -78,7 +78,7 @@ def run(base_url):
             )
             page = ctx.new_page()
             try:
-                page.goto(base_url, wait_until="networkidle", timeout=45000)
+                page.goto(base_url, wait_until="domcontentloaded", timeout=45000)
                 page.wait_for_timeout(2500)
             except Exception as e:
                 report["problems"].append(f"{label}: 页面加载失败 {e}")

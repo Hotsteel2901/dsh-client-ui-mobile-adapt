@@ -159,7 +159,7 @@ def test_viewports(browser, url):
         pg.on("pageerror", lambda e: errs.append(str(e)[:250]))
         rec = {"viewport": f"{name} {w}x{h}"}
         try:
-            pg.goto(url, wait_until="networkidle", timeout=45000)
+            pg.goto(url, wait_until="domcontentloaded", timeout=45000)
             pg.wait_for_timeout(2200)
             dismiss_dialogs(pg)
             pg.wait_for_timeout(400)
@@ -198,7 +198,7 @@ def test_settings_taps(browser, url):
     errs = []
     pg.on("pageerror", lambda e: errs.append(str(e)[:250]))
     out = {}
-    pg.goto(url, wait_until="networkidle", timeout=45000)
+    pg.goto(url, wait_until="domcontentloaded", timeout=45000)
     pg.wait_for_timeout(2400)
     dismiss_dialogs(pg)
     pg.wait_for_timeout(500)
@@ -289,7 +289,7 @@ def test_breakpoint(browser, url):
                                  is_mobile=w < 768, has_touch=w < 768)
         pg = ctx.new_page()
         try:
-            pg.goto(url, wait_until="networkidle", timeout=45000)
+            pg.goto(url, wait_until="domcontentloaded", timeout=45000)
             pg.wait_for_timeout(2000)
             dismiss_dialogs(pg)
             pg.wait_for_timeout(400)

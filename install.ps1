@@ -54,7 +54,7 @@ $BasePkg    = '@deepseek-ai/dsh-base'
 $RepoUrl    = 'https://github.com/Hotsteel2901/dsh-client-ui-mobile-adapt.git'
 # Used only when every detection method fails. Never `latest`: that tag points
 # at a broken 0.0.1-rc.1 whose own dependency was never published.
-$FallbackVersion = '0.1.5-rc.2'
+$FallbackVersion = '0.2.0-rc.2'
 
 # Packages that must exist for the runtime to boot. These are pulled in as
 # PEER dependencies; with autoInstallPeers disabled they go missing.

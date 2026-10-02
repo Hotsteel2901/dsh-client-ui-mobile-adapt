@@ -118,7 +118,7 @@ def run(base_url):
             pg.on("pageerror", lambda e: errs.append(str(e)[:300]))
             item = {"viewport": f"{name} {w}x{h}"}
             try:
-                pg.goto(base_url, wait_until="networkidle", timeout=45000)
+                pg.goto(base_url, wait_until="domcontentloaded", timeout=45000)
                 pg.wait_for_timeout(2500)
                 item["dialogsDismissed"] = dismiss_dialogs(pg)
                 pg.wait_for_timeout(500)
