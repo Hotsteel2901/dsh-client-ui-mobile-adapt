@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-dsh 0.2.0-rc.2 sync verification.
+dsh 0.2.1-rc.2 sync verification.
 
 The plugin styles components that only mount inside a live conversation
 (composer mode trigger, agent/model selector, ...), and creating a real
@@ -14,23 +14,36 @@ still matches upstream AND is still scoped to the mobile breakpoint.
 
 Usage: python3 tools/sync_check.py <base_url>
 """
+import glob
+import os
 import sys
 from playwright.sync_api import sync_playwright
 
-CHROME = "/root/.cache/ms-playwright/chromium-1208/chrome-linux64/chrome"
+CHROME = os.environ.get("CHROME") or next(iter(sorted(glob.glob(
+    os.path.expanduser("~/.cache/ms-playwright/chromium-*/chrome-linux*/chrome")))), "")
 
 # (class, property, phone expectation substring, label)
 # min-height comes from the 44px touch-target rule; font-size from the
 # trigger label rule. `None` for the phone expectation means "must be
 # untouched", i.e. a control the plugin deliberately does not resize.
 TARGETS = [
-    ("iWlSmW_trigger", "minHeight", None, "permission-presets trigger (replaces Sh0Q9G)"),
-    ("iWlSmW_triggerLabel", "fontSize", "12px", "permission-presets trigger label (replaces Sh0Q9G)"),
+    ("iWlSmW_trigger", "minHeight", "44px", "permission-presets trigger (0.2.x)"),
+    ("iWlSmW_triggerLabel", "fontSize", "12px", "permission-presets trigger label"),
     ("_2XZxNq_selector", "minHeight", "44px", "chat selector (replaces lats3W)"),
-    ("_7KE1Ra_trigger", "minHeight", None, "model-selection trigger"),
+    ("_7KE1Ra_trigger", "minHeight", "44px", "model-selection trigger"),
     ("hVGvvW_selector", "minHeight", "44px", "locale selector"),
     ("oY77xG_selector", "minHeight", "44px", "permission-presets selector"),
     ("T1PP_q_selector", "minHeight", "44px", "conversation selector"),
+    ("uV2eYG_add", "minWidth", "44px", "composer add button"),
+    ("uV2eYG_primary", "minWidth", "44px", "composer send button"),
+    ("JObwrW_trigger", "minHeight", "44px", "context meter trigger"),
+    ("bVCLcG_expander", "width", "44px", "font-size expander"),
+    ("P3OORG_iconButton", "minWidth", "44px", "right-sidebar icon buttons"),
+    ("Y0dWHa_close", "width", "44px", "trajectory detail close"),
+    ("fV0t5q_toggle", "minHeight", "44px", "trajectory toolbar toggle"),
+    ("dsh-stats-pill", "minHeight", "44px", "stats pill"),
+    ("dsh-mobile-hamburger", "display", "grid", "mobile hamburger visible"),
+    ("wSkVaW_header", "paddingLeft", "64px", "conversation header leaves room for hamburger"),
     ("wSkVaW_composerSeat", "paddingBottom", None, "composer seat (structural anchor)"),
 ]
 
@@ -100,7 +113,7 @@ def main():
     if bad:
         print(f"{len(bad)} FAILED of {len(results)}")
         return 1
-    print(f"ALL {len(results)} PASS — selectors match 0.2.0-rc.2 and stay phone-scoped")
+    print(f"ALL {len(results)} PASS — selectors match 0.2.1-rc.2 and stay phone-scoped")
     return 0
 
 

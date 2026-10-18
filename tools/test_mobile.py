@@ -11,10 +11,13 @@ dsh-client-ui-mobile-adapt — 全面移动端仿真测试
 用法: python3 tools/test_mobile.py <base_url>
 """
 import json
+import glob
+import os
 import sys
 from playwright.sync_api import sync_playwright
 
-CHROME = "/root/.cache/ms-playwright/chromium-1208/chrome-linux64/chrome"
+CHROME = os.environ.get("CHROME") or next(iter(sorted(glob.glob(
+    os.path.expanduser("~/.cache/ms-playwright/chromium-*/chrome-linux*/chrome")))), "")
 
 VIEWPORTS = [
     ("iPhone SE",   375, 667, 2),

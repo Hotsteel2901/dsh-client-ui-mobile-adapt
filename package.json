@@ -1,7 +1,7 @@
 {
   "name": "dsh-client-ui-mobile-adapt",
-  "description": "Mobile adaptation for the DeepSeek Harness Web GUI: single-column layout, sidebar drawer, compact header/composer, fullscreen settings, trajectory floating details, stats pill panel",
-  "version": "0.3.0",
+  "description": "Mobile adaptation for the DeepSeek Harness Web GUI: single-column layout, sidebar drawer, compact header/composer, fullscreen settings, fullscreen right sidebar, trajectory floating details, stats pill panel",
+  "version": "0.4.0",
   "publishConfig": {
     "access": "public"
   },
@@ -50,7 +50,14 @@
         "0.1.7-rc.1": "compatible",
         "0.1.7-rc.2": "compatible",
         "0.2.0-rc.1": "unknown",
-        "0.2.0-rc.2": "compatible"
+        "0.2.0-rc.2": "compatible",
+        "0.2.1-alpha.1": "unknown",
+        "0.2.1-alpha.2": "unknown",
+        "0.2.1-alpha.3": "unknown",
+        "0.2.1-alpha.4": "unknown",
+        "0.2.1-alpha.5": "unknown",
+        "0.2.1-rc.1": "unknown",
+        "0.2.1-rc.2": "compatible"
       }
     }
   },

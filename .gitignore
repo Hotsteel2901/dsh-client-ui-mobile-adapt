@@ -2,3 +2,4 @@ node_modules/
 *.tgz
 *.tar.gz
 .DS_Store
+__pycache__/

@@ -22,7 +22,7 @@ BASE_PKG="@deepseek-ai/dsh-base"
 DEFAULT_PROFILE="webmobile"
 DEFAULT_VERSION=""          # empty => derive from the running harness
 # Used only when every detection method fails (offline, registry unreachable).
-FALLBACK_VERSION="0.2.0-rc.2"
+FALLBACK_VERSION="0.2.1-rc.2"
 
 # Capture the script's own directory BEFORE any `cd` happens. Later steps chdir
 # into the profile directory, which would otherwise break relative resolution
@@ -64,7 +64,7 @@ Usage: install.sh [options]
 
 Options:
   -p, --profile <name>   dsh profile to install into (default: webmobile)
-  -v, --version <ver>    dsh version to pin, e.g. 0.1.5-rc.2 (default: latest)
+  -v, --version <ver>    dsh version to pin, e.g. 0.2.1-rc.2 (default: latest)
       --from-npm         install the plugin from the npm registry
                          (default: from the directory containing this script)
       --src <path|spec>  explicit plugin source (local dir, tarball, or npm spec)
@@ -74,7 +74,7 @@ Options:
 
 Examples:
   ./install.sh
-  ./install.sh --profile webmobile --version 0.1.5-rc.2
+  ./install.sh --profile webmobile --version 0.2.1-rc.2
   ./install.sh --from-npm
   ./install.sh --check
 EOF

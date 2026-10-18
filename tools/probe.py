@@ -11,39 +11,50 @@ dsh-client-ui-mobile-adapt — 移动端仿真验证探针
 用法:  python3 tools/probe.py <base_url>
 """
 import json
+import glob
+import os
 import sys
 import re
 from playwright.sync_api import sync_playwright
 
-CHROME = "/root/.cache/ms-playwright/chromium-1208/chrome-linux64/chrome"
+CHROME = os.environ.get("CHROME") or next(iter(sorted(glob.glob(
+    os.path.expanduser("~/.cache/ms-playwright/chromium-*/chrome-linux*/chrome")))), "")
 
 # 插件 CSS 中引用的全部 hash 类名 —— 与 lib/client.js 保持同步
 REFERENCED = [
-    # layout
+    # layout (0.2.1 added bottomRow / overlayLayer)
     "pI_x6G_frame", "pI_x6G_sidebarCol", "pI_x6G_centerCol",
-    "pI_x6G_rightbarCol", "pI_x6G_detailsCol", "pI_x6G_handle",
+    "pI_x6G_rightbarCol", "pI_x6G_handle", "pI_x6G_bottomRow",
+    "pI_x6G_overlayLayer",
     # conversation
     "wSkVaW_header", "wSkVaW_titleRow", "wSkVaW_headerActions",
     "wSkVaW_headerUtilities", "wSkVaW_crumb", "wSkVaW_tabs",
     "wSkVaW_root", "wSkVaW_composerSeat",
     "wSkVaW_headerCorner", "wSkVaW_widthHandle",
     "uV2eYG_row", "uV2eYG_tools", "uV2eYG_modes", "uV2eYG_trailing",
-    "Sh0Q9G_trigger", "Sh0Q9G_triggerLabel",
-    "JObwrW_panel",
+    "uV2eYG_add", "uV2eYG_primary", "uV2eYG_select",
+    "iWlSmW_trigger", "iWlSmW_triggerLabel",
+    "JObwrW_panel", "JObwrW_trigger",
     # settings
-    "VOzbGW_overlay", "VOzbGW_panel", "VOzbGW_nav", "VOzbGW_navTitle",
-    "VOzbGW_navList", "VOzbGW_navCell", "VOzbGW_header", "VOzbGW_options",
+    "VOzbGW_overlay", "VOzbGW_mask", "VOzbGW_panel", "VOzbGW_nav",
+    "VOzbGW_navTitle", "VOzbGW_navList", "VOzbGW_navCell",
+    "VOzbGW_header", "VOzbGW_options", "VOzbGW_close",
+    "bVCLcG_stepper", "bVCLcG_arrows", "bVCLcG_arrow",
+    "bVCLcG_row", "bVCLcG_control", "bVCLcG_expander",
+    # chat / 0.2.1 stats pills
+    "bOPqQW_root", "bOPqQW_anchor", "bOPqQW_pill",
     # cordis
-    "Nqubda_panel",
+    "Nqubda_panel", "Nqubda_actionButton",
     # trajectory
     "qBU-ya_root", "qBU-ya_ledger",
     "Y0dWHa_split", "Y0dWHa_tablePane", "Y0dWHa_details",
-    "Y0dWHa_detailsResizeHandle", "Y0dWHa_detailsHeader",
+    "Y0dWHa_detailsResizeHandle", "Y0dWHa_detailsHeader", "Y0dWHa_close",
     "Y0dWHa_detailBody", "Y0dWHa_detailBodySummary", "Y0dWHa_detailTabs",
     "fV0t5q_inner", "fV0t5q_search", "fV0t5q_actions",
+    "fV0t5q_toggle", "fV0t5q_control", "fV0t5q_action",
     # external packages
     "hHd-Xa_root", "_7KE1Ra_menu", "_7KE1Ra_trigger",
-    "_7KE1Ra_triggerLabel", "mufS8W_card", "Md3f7G_flowItem",
+    "_7KE1Ra_triggerLabel", "mufS8W_card", "P3OORG_iconButton",
 ]
 
 DEVICES = {

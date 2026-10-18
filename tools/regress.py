@@ -12,10 +12,13 @@ dsh-client-ui-mobile-adapt — 验收回归测试
 退出码 0 = 全部通过
 """
 import json
+import glob
+import os
 import sys
 from playwright.sync_api import sync_playwright
 
-CHROME = "/root/.cache/ms-playwright/chromium-1208/chrome-linux64/chrome"
+CHROME = os.environ.get("CHROME") or next(iter(sorted(glob.glob(
+    os.path.expanduser("~/.cache/ms-playwright/chromium-*/chrome-linux*/chrome")))), "")
 
 VIEWPORTS = [
     # name, width, height, dpr, is_phone
@@ -81,12 +84,21 @@ def scan_tap_targets(pg):
             const cs = getComputedStyle(e);
             if (r.width < 1 || r.height < 1) return;
             if (cs.display === 'none' || cs.visibility === 'hidden') return;
-            if (r.height < minTap || r.width < minTap) {
+            // 插件对 16~36px 的小控件用 ::after 把可点区域扩到 44px，
+            // getBoundingClientRect 只反映视觉盒子，这里把伪元素热区算进去。
+            let w = r.width, h = r.height;
+            const after = getComputedStyle(e, '::after');
+            if (after.content !== 'none' && after.position === 'absolute') {
+                const num = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
+                w += Math.max(0, -num(after.left)) + Math.max(0, -num(after.right));
+                h += Math.max(0, -num(after.top)) + Math.max(0, -num(after.bottom));
+            }
+            if (h < minTap || w < minTap) {
                 out.push({
                     cls: (e.className || '').toString().slice(0, 46),
                     aria: e.getAttribute('aria-label'),
                     text: (e.innerText || '').trim().slice(0, 22),
-                    w: Math.round(r.width), h: Math.round(r.height),
+                    w: Math.round(w), h: Math.round(h),
                 });
             }
         });
@@ -205,7 +217,28 @@ def test_settings_taps(browser, url):
 
     pg.query_selector(".dsh-mobile-hamburger").click()
     pg.wait_for_timeout(900)
-    pg.query_selector('button[aria-label*="Settings"]').click()
+    # 0.2.1 moved Settings into the sidebar account menu; fall back to the
+    # direct label for older generations.
+    account = pg.query_selector('button[aria-label="Account menu"], .yHnPSG_trigger')
+    if account:
+        account.click()
+        pg.wait_for_timeout(500)
+        opened = False
+        for label in ("Settings", "设置"):
+            item = pg.query_selector(f'[role="menu"] [role="menuitem"]:has-text("{label}")')
+            if item:
+                item.click()
+                opened = True
+                break
+        if not opened:
+            pg.keyboard.press("Escape")
+            direct = pg.query_selector('button[aria-label*="Settings"]')
+            if direct:
+                direct.click()
+    else:
+        direct = pg.query_selector('button[aria-label*="Settings"]')
+        if direct:
+            direct.click()
     pg.wait_for_timeout(1500)
     swipe = make_swiper(ctx, pg)
 

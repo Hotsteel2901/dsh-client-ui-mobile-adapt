@@ -11,14 +11,17 @@ dsh-client-ui-mobile-adapt — 交互路径验证
 用法: python3 tools/test_interactions.py <base_url>
 """
 import json
+import glob
+import os
 import sys
 from playwright.sync_api import sync_playwright
 
-CHROME = "/root/.cache/ms-playwright/chromium-1208/chrome-linux64/chrome"
+CHROME = os.environ.get("CHROME") or next(iter(sorted(glob.glob(
+    os.path.expanduser("~/.cache/ms-playwright/chromium-*/chrome-linux*/chrome")))), "")
 
 # 插件 CSS 中引用、但首屏未渲染的懒加载类名
 LAZY_CLASSES = [
-    "JObwrW_", "Nqubda_", "Sh0Q9G_", "Y0dWHa_", "_7KE1Ra_",
+    "JObwrW_", "Nqubda_", "iWlSmW_", "P3OORG_", "Y0dWHa_", "_7KE1Ra_",
     "fV0t5q_", "mufS8W_", "qBU-ya_",
 ]
 
